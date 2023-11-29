@@ -1,0 +1,137 @@
+package api.test;
+
+import api.endpoints.UsersEndPoints;
+import api.payload.User;
+import com.github.javafaker.Faker;
+import config.UserDataConfig;
+import io.restassured.response.Response;
+import org.testng.Assert;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
+import java.util.List;
+import java.util.Optional;
+
+public class UserTest {
+    Faker faker;
+    User userPayload;
+
+    @BeforeClass
+    public void setupData(){
+        faker=new Faker();
+        userPayload=new User();
+
+        userPayload.setId(faker.idNumber().hashCode());
+        userPayload.setName(faker.name().name());
+        userPayload.setUsername(faker.name().username());
+        userPayload.setEmail(faker.internet().emailAddress());
+        userPayload.setPhone(faker.phoneNumber().cellPhone());
+        userPayload.setWebsite(faker.internet().url());
+
+        User.Address address= new User.Address();
+        address.setStreet(faker.address().streetName());
+        address.setSuite(faker.address().secondaryAddress());
+        address.setCity(faker.address().city());
+        address.setZipcode(faker.address().zipCode());
+
+        User.Geo geo = new User.Geo();
+        geo.setLat(faker.address().latitude());
+        geo.setLng(faker.address().longitude());
+
+        address.setGeo(geo);
+        userPayload.setAddress(address);
+
+        User.Company company = new User.Company();
+        company.setName(faker.company().name());
+        company.setCatchPhrase(faker.lorem().sentence());
+        String bs = String.join(" ", faker.lorem().words(5));
+        company.setBs(bs);
+
+        userPayload.setCompany(company);
+    }
+
+    @Test(priority = 1)
+    public void testGetAllUsers(){
+        Response response = UsersEndPoints.getAllUser();
+
+        response.then().log().all();
+        Assert.assertEquals(response.getStatusCode(), 200);
+
+        String contentType = response.getContentType();
+        Assert.assertTrue(contentType.startsWith("application/json"), "Content type is not JSON");
+
+        // for user id = 5
+        List<User> users = response.jsonPath().getList("$", User.class);
+        Optional<User> optionalUser = users.stream()
+                .filter(user -> user.getId() == 5)
+                .findFirst();
+
+        Assert.assertTrue(optionalUser.isPresent(), "User with id=5 not found");
+
+        User expectedUserFromJSON = UserDataConfig.getUserData();
+        Assert.assertNotNull(expectedUserFromJSON, "Expected user data is null");
+
+        // Assertions comparing JSON values with expectedUser
+        User userFromReadData = optionalUser.get();
+        Assert.assertEquals(userFromReadData.getName(), expectedUserFromJSON.getName(), "Name data is not equal");
+        Assert.assertEquals(userFromReadData.getUsername(), expectedUserFromJSON.getUsername(),"Username data is not equal");
+        Assert.assertEquals(userFromReadData.getEmail(), expectedUserFromJSON.getEmail(),"Email data is not equal");
+
+        // Asserting Address details
+        User.Address addressFromReadData = userFromReadData.getAddress();
+        Assert.assertEquals(addressFromReadData.getStreet(), expectedUserFromJSON.getAddress().getStreet(), "Street data is not equal");
+        Assert.assertEquals(addressFromReadData.getSuite(), expectedUserFromJSON.getAddress().getSuite(),"Suite data is not equal");
+        Assert.assertEquals(addressFromReadData.getCity(), expectedUserFromJSON.getAddress().getCity(),"City data is not equal");
+        Assert.assertEquals(addressFromReadData.getZipcode(), expectedUserFromJSON.getAddress().getZipcode(),"Zipcode data is not equal");
+
+        // Asserting Geo details
+        User.Geo geoFromReadData = addressFromReadData.getGeo();
+        Assert.assertEquals(geoFromReadData.getLat(), expectedUserFromJSON.getAddress().getGeo().getLat(),"Lat data is not equal");
+        Assert.assertEquals(geoFromReadData.getLng(), expectedUserFromJSON.getAddress().getGeo().getLng(),"Lng data is not equal");
+
+        // Asserting Company details
+        User.Company companyFromReadData = userFromReadData.getCompany();
+        Assert.assertEquals(companyFromReadData.getName(), expectedUserFromJSON.getCompany().getName(),"Company name data is not equal");
+        Assert.assertEquals(companyFromReadData.getCatchPhrase(), expectedUserFromJSON.getCompany().getCatchPhrase(),"CatchPhrase data is not equal");
+        Assert.assertEquals(companyFromReadData.getBs(), expectedUserFromJSON.getCompany().getBs(), "Bs data is not equal");
+    }
+
+    @Test(priority = 2)
+    public void testPostUser() {
+        int userId = 5;
+        Response response = UsersEndPoints.getUser(userId);
+
+        response.then().log().all();
+        Assert.assertEquals(response.getStatusCode(), 200);
+
+        String contentType = response.getContentType();
+        Assert.assertTrue(contentType.startsWith("application/json"), "Content type is not JSON");
+
+        User expectedUserFromJSON= UserDataConfig.getUserData();
+        Assert.assertNotNull(expectedUserFromJSON,"Expected user data is not null");
+
+        // Assertions comparing JSON values with expectedUser
+        User userFromReadData = response.as(User.class);
+        Assert.assertEquals(userFromReadData.getName(), expectedUserFromJSON.getName(), "Name data is not equal");
+        Assert.assertEquals(userFromReadData.getUsername(), expectedUserFromJSON.getUsername(),"Username data is not equal");
+        Assert.assertEquals(userFromReadData.getEmail(), expectedUserFromJSON.getEmail(),"Email data is not equal");
+
+        // Asserting Address details
+        User.Address addressFromReadData = userFromReadData.getAddress();
+        Assert.assertEquals(addressFromReadData.getStreet(), expectedUserFromJSON.getAddress().getStreet(), "Street data is not equal");
+        Assert.assertEquals(addressFromReadData.getSuite(), expectedUserFromJSON.getAddress().getSuite(),"Suite data is not equal");
+        Assert.assertEquals(addressFromReadData.getCity(), expectedUserFromJSON.getAddress().getCity(),"City data is not equal");
+        Assert.assertEquals(addressFromReadData.getZipcode(), expectedUserFromJSON.getAddress().getZipcode(),"Zipcode data is not equal");
+
+        // Asserting Geo details
+        User.Geo geoFromReadData = addressFromReadData.getGeo();
+        Assert.assertEquals(geoFromReadData.getLat(), expectedUserFromJSON.getAddress().getGeo().getLat(),"Lat data is not equal");
+        Assert.assertEquals(geoFromReadData.getLng(), expectedUserFromJSON.getAddress().getGeo().getLng(),"Lng data is not equal");
+
+        // Asserting Company details
+        User.Company companyFromReadData = userFromReadData.getCompany();
+        Assert.assertEquals(companyFromReadData.getName(), expectedUserFromJSON.getCompany().getName(),"Company name data is not equal");
+        Assert.assertEquals(companyFromReadData.getCatchPhrase(), expectedUserFromJSON.getCompany().getCatchPhrase(),"CatchPhrase data is not equal");
+        Assert.assertEquals(companyFromReadData.getBs(), expectedUserFromJSON.getCompany().getBs(), "Bs data is not equal");
+    }
+}
